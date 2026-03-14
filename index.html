@@ -1,0 +1,2422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#020812">
+<title>ChainTrace — Hyperledger Fabric DApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════
+   RESET & ROOT
+════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+:root{
+  --bg:#020812;--bg1:#060f1e;--bg2:#0a1628;--bg3:#0e1f38;
+  --surface:#111f35;--surface2:#152540;
+  --border:rgba(56,189,248,0.12);--border2:rgba(56,189,248,0.22);
+  --cyan:#38bdf8;--cyanD:#0ea5e9;--cyanL:#7dd3fc;
+  --violet:#a78bfa;--violetD:#7c3aed;
+  --green:#34d399;--greenD:#059669;
+  --amber:#fbbf24;--amberD:#d97706;
+  --red:#f87171;--redD:#dc2626;
+  --pink:#f472b6;
+  --text:#e2f0ff;--text2:#94b8d4;--muted:#4a6a8a;
+  --font:'Outfit',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --radius:14px;--radius-sm:8px;--radius-lg:20px;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+  --shadow-lg:0 8px 48px rgba(0,0,0,.6);
+  --nav-h:60px;--sidebar-w:240px;
+  --transition:0.22s cubic-bezier(0.4,0,0.2,1);
+}
+
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font);min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Animated mesh background */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 0%,rgba(56,189,248,.06) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 100%,rgba(167,139,250,.07) 0%,transparent 70%),
+    linear-gradient(rgba(56,189,248,.015) 1px,transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg,rgba(56,189,248,.015) 1px,transparent 1px) 0 0/48px 48px;
+}
+
+/* ════════════════════════════════════════
+   TOP NAV
+════════════════════════════════════════ */
+.topnav{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:200;
+  background:rgba(2,8,18,.88);backdrop-filter:blur(20px) saturate(1.5);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;
+}
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  font-size:1.15rem;font-weight:800;letter-spacing:-.5px;white-space:nowrap;
+  text-decoration:none;color:var(--text);
+}
+.logo-hex{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--cyan),var(--violetD));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  box-shadow:0 0 16px rgba(56,189,248,.35);
+  animation:hexPulse 3s ease-in-out infinite;
+}
+@keyframes hexPulse{0%,100%{box-shadow:0 0 16px rgba(56,189,248,.35)}50%{box-shadow:0 0 28px rgba(56,189,248,.6)}}
+
+/* Hamburger */
+.nav-burger{
+  display:none;background:none;border:none;cursor:pointer;
+  padding:6px;border-radius:8px;color:var(--text2);
+  transition:color var(--transition);
+}
+.nav-burger:hover{color:var(--cyan)}
+.burger-bar{display:block;width:22px;height:2px;background:currentColor;margin:4px 0;border-radius:2px;transition:all .3s}
+
+.nav-mid{flex:1;display:flex;align-items:center;gap:4px;justify-content:center}
+.nav-tab{
+  padding:6px 14px;border-radius:var(--radius-sm);font-size:.82rem;
+  font-weight:600;cursor:pointer;border:none;background:none;
+  color:var(--muted);transition:all var(--transition);font-family:var(--font);
+  white-space:nowrap;
+}
+.nav-tab:hover{color:var(--text2)}
+.nav-tab.active{background:rgba(56,189,248,.1);color:var(--cyan)}
+
+.nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.channel-selector{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:var(--font);font-size:.78rem;
+  padding:6px 10px;cursor:pointer;outline:none;max-width:160px;
+}
+.net-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);
+  border-radius:100px;padding:4px 10px;font-family:var(--mono);font-size:.7rem;color:var(--green);
+  white-space:nowrap;
+}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+
+/* Auth pill */
+.auth-pill{
+  display:flex;align-items:center;gap:8px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:100px;padding:4px 12px 4px 4px;
+}
+.auth-avatar{
+  width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--violetD));
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000;
+}
+.auth-name{font-size:.78rem;font-weight:600}
+
+/* ════════════════════════════════════════
+   LAYOUT
+════════════════════════════════════════ */
+.app{
+  display:flex;min-height:100vh;padding-top:var(--nav-h);
+}
+
+/* Sidebar */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;position:fixed;
+  top:var(--nav-h);bottom:0;left:0;
+  background:rgba(6,15,30,.95);border-right:1px solid var(--border);
+  padding:16px 12px;overflow-y:auto;z-index:100;
+  transition:transform var(--transition);
+}
+.sidebar-section{margin-bottom:20px}
+.sidebar-label{
+  font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;padding:0 8px;font-family:var(--mono);
+}
+.sidebar-link{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;
+  color:var(--text2);font-size:.85rem;font-weight:500;
+  transition:all var(--transition);border:none;background:none;
+  width:100%;text-align:left;font-family:var(--font);
+}
+.sidebar-link:hover{background:rgba(56,189,248,.07);color:var(--text)}
+.sidebar-link.active{background:rgba(56,189,248,.12);color:var(--cyan)}
+.sidebar-link .icon{font-size:1.1rem;width:22px;text-align:center}
+.sidebar-badge{
+  margin-left:auto;background:rgba(248,113,113,.15);color:var(--red);
+  border-radius:100px;padding:2px 7px;font-size:.65rem;font-family:var(--mono);
+}
+.sidebar-badge.green{background:rgba(52,211,153,.12);color:var(--green)}
+
+/* Main content */
+.main{
+  flex:1;margin-left:var(--sidebar-w);
+  min-height:100%;padding:24px;
+  position:relative;z-index:1;
+}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  z-index:99;backdrop-filter:blur(4px);
+}
+
+/* ════════════════════════════════════════
+   PAGES (sections)
+════════════════════════════════════════ */
+.page{display:none}
+.page.active{display:block}
+
+/* ════════════════════════════════════════
+   PAGE HEADER
+════════════════════════════════════════ */
+.page-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:24px;gap:12px;flex-wrap:wrap;
+}
+.page-title{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+.page-sub{font-size:.82rem;color:var(--text2);margin-top:2px}
+.page-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ════════════════════════════════════════
+   CARDS & GRID
+════════════════════════════════════════ */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);position:relative;overflow:hidden;
+  transition:all var(--transition);
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  opacity:0;transition:opacity var(--transition);
+}
+.card:hover::before{opacity:.6}
+.card-body{padding:20px}
+.card-title{font-weight:700;font-size:.95rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+
+/* Grid layouts */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+
+/* ════════════════════════════════════════
+   METRIC CARDS
+════════════════════════════════════════ */
+.metric-card{cursor:default}
+.metric-card .card-body{padding:18px}
+.metric-icon{
+  width:42px;height:42px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;margin-bottom:12px;
+}
+.metric-val{font-family:var(--mono);font-size:1.9rem;font-weight:500;line-height:1}
+.metric-lbl{font-size:.75rem;color:var(--text2);margin-top:5px;letter-spacing:.3px}
+.metric-chg{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--mono);font-size:.7rem;margin-top:10px;
+  padding:3px 8px;border-radius:100px;
+}
+.chg-up{background:rgba(52,211,153,.1);color:var(--green)}
+.chg-dn{background:rgba(248,113,113,.1);color:var(--red)}
+
+/* ════════════════════════════════════════
+   BUTTONS
+════════════════════════════════════════ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:10px 20px;border-radius:var(--radius-sm);font-family:var(--font);
+  font-size:.85rem;font-weight:700;cursor:pointer;border:none;
+  transition:all var(--transition);white-space:nowrap;letter-spacing:.2px;
+}
+.btn-sm{padding:7px 14px;font-size:.78rem}
+.btn-xs{padding:4px 10px;font-size:.72rem}
+.btn-icon{padding:8px;width:36px;height:36px}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--cyanD));color:#000;font-weight:800;box-shadow:0 0 20px rgba(56,189,248,.25)}
+.btn-primary:hover{box-shadow:0 0 32px rgba(56,189,248,.45);transform:translateY(-1px)}
+.btn-violet{background:linear-gradient(135deg,var(--violet),var(--violetD));color:#fff;box-shadow:0 0 20px rgba(167,139,250,.25)}
+.btn-violet:hover{box-shadow:0 0 32px rgba(167,139,250,.45);transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,var(--green),var(--greenD));color:#000;font-weight:800;box-shadow:0 0 20px rgba(52,211,153,.25)}
+.btn-green:hover{box-shadow:0 0 32px rgba(52,211,153,.45);transform:translateY(-1px)}
+.btn-amber{background:linear-gradient(135deg,var(--amber),var(--amberD));color:#000;font-weight:800}
+.btn-red{background:linear-gradient(135deg,var(--red),var(--redD));color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-outline:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(56,189,248,.05)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* ════════════════════════════════════════
+   BADGES / STATUS
+════════════════════════════════════════ */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:100px;
+  font-family:var(--mono);font-size:.68rem;font-weight:500;
+}
+.badge::before{content:'●';font-size:.5rem}
+.badge-cyan{background:rgba(56,189,248,.1);color:var(--cyan);border:1px solid rgba(56,189,248,.2)}
+.badge-green{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.badge-amber{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.2)}
+.badge-red{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.badge-violet{background:rgba(167,139,250,.1);color:var(--violet);border:1px solid rgba(167,139,250,.2)}
+.badge-pink{background:rgba(244,114,182,.1);color:var(--pink);border:1px solid rgba(244,114,182,.2)}
+
+/* ════════════════════════════════════════
+   TABLE
+════════════════════════════════════════ */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:600px}
+th{
+  font-family:var(--mono);font-size:.67rem;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);
+  padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+td{padding:12px 14px;font-size:.83rem;border-bottom:1px solid rgba(56,189,248,.04);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background var(--transition)}
+tbody tr:hover td{background:rgba(56,189,248,.03)}
+.td-mono{font-family:var(--mono);font-size:.75rem}
+.td-cyan{color:var(--cyan)}
+.td-muted{color:var(--text2)}
+
+/* ════════════════════════════════════════
+   FORM
+════════════════════════════════════════ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:.72rem;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.5px}
+.form-input,.form-select,.form-textarea{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:10px 13px;color:var(--text);font-family:var(--font);font-size:.88rem;
+  transition:border-color var(--transition),box-shadow var(--transition);width:100%;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  outline:none;border-color:var(--cyan);
+  box-shadow:0 0 0 3px rgba(56,189,248,.1);
+}
+.form-input::placeholder{color:var(--muted)}
+.form-select{appearance:none;cursor:pointer}
+.form-textarea{resize:vertical;min-height:80px}
+.form-hint{font-size:.7rem;color:var(--muted);font-family:var(--mono)}
+
+/* ════════════════════════════════════════
+   MODAL
+════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(10px);
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius-lg);width:100%;max-width:520px;
+  max-height:90vh;overflow-y:auto;
+  animation:modalIn .28s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{
+  padding:22px 22px 0;display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.modal-title{font-size:1.05rem;font-weight:800}
+.modal-close{
+  background:none;border:none;color:var(--text2);cursor:pointer;
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  transition:all var(--transition);
+}
+.modal-close:hover{background:var(--bg3);color:var(--text)}
+.modal-body{padding:0 22px 22px}
+.modal-footer{display:flex;gap:10px;margin-top:20px}
+
+/* ════════════════════════════════════════
+   BLOCKCHAIN CHAIN VISUAL
+════════════════════════════════════════ */
+.chain-scroll{
+  display:flex;align-items:center;gap:0;
+  overflow-x:auto;padding:4px 2px 10px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.chain-scroll::-webkit-scrollbar{height:4px}
+.chain-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.chain-block{
+  flex-shrink:0;min-width:148px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 14px;cursor:pointer;transition:all var(--transition);
+}
+.chain-block:hover{border-color:var(--cyan);box-shadow:0 0 18px rgba(56,189,248,.15)}
+.chain-block.genesis{border-color:var(--violetD)}
+.chain-block.latest{
+  border-color:var(--green);
+  animation:latestGlow 2.5s ease-in-out infinite;
+}
+@keyframes latestGlow{0%,100%{box-shadow:0 0 8px rgba(52,211,153,.2)}50%{box-shadow:0 0 20px rgba(52,211,153,.4)}}
+.block-num{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.block-hash{font-family:var(--mono);font-size:.64rem;color:var(--cyan);margin-top:3px}
+.block-txs{font-size:.78rem;font-weight:600;margin-top:8px}
+.block-time{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:2px}
+
+.chain-arrow{
+  flex-shrink:0;width:24px;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.chain-arrow::before{
+  content:'';display:block;height:2px;width:24px;
+  background:linear-gradient(90deg,var(--cyan),var(--violet));
+  position:relative;overflow:hidden;
+}
+.chain-arrow::after{
+  content:'▶';color:var(--violet);font-size:.6rem;
+  position:absolute;right:-4px;
+}
+
+/* ════════════════════════════════════════
+   PROGRESS
+════════════════════════════════════════ */
+.progress{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;flex-shrink:0}
+.progress-fill{height:100%;border-radius:3px;transition:width 1.5s ease}
+
+/* ════════════════════════════════════════
+   CODE BLOCK
+════════════════════════════════════════ */
+.code-block{
+  background:#000d1a;border:1px solid rgba(56,189,248,.1);border-radius:var(--radius-sm);
+  padding:16px;font-family:var(--mono);font-size:.73rem;line-height:1.9;
+  overflow-x:auto;position:relative;
+}
+.code-block pre{white-space:pre-wrap;word-break:break-word}
+.kw{color:#f472b6}.fn{color:#4ade80}.str{color:#fde68a}
+.cm{color:#4a6a8a;font-style:italic}.num{color:#c4b5fd}.type{color:#7dd3fc}
+.copy-btn{
+  position:absolute;top:10px;right:10px;
+  background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);
+  border-radius:6px;color:var(--cyan);padding:4px 8px;
+  font-size:.65rem;cursor:pointer;font-family:var(--mono);
+  transition:all var(--transition);
+}
+.copy-btn:hover{background:rgba(56,189,248,.2)}
+
+/* ════════════════════════════════════════
+   TOAST
+════════════════════════════════════════ */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:12px 16px;
+  min-width:280px;max-width:360px;
+  display:flex;align-items:center;gap:10px;font-size:.83rem;
+  box-shadow:var(--shadow-lg);pointer-events:auto;
+  animation:toastIn .3s ease;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--cyan)}
+.toast.warn{border-left:3px solid var(--amber)}
+
+/* ════════════════════════════════════════
+   SSE LIVE FEED
+════════════════════════════════════════ */
+.live-feed{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.feed-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 12px;border-radius:var(--radius-sm);
+  background:var(--bg2);border:1px solid var(--border);
+  font-size:.78rem;animation:feedIn .3s ease;
+}
+@keyframes feedIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.feed-event{font-family:var(--mono);color:var(--cyan);font-size:.72rem}
+.feed-time{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--muted)}
+
+/* ════════════════════════════════════════
+   NETWORK GRAPH CANVAS
+════════════════════════════════════════ */
+.canvas-wrap{
+  background:var(--bg2);border-radius:var(--radius-sm);
+  overflow:hidden;display:flex;align-items:center;justify-content:center;
+}
+
+/* ════════════════════════════════════════
+   MOBILE BOTTOM NAV
+════════════════════════════════════════ */
+.bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(6,15,30,.96);border-top:1px solid var(--border);
+  padding:8px 4px;backdrop-filter:blur(20px);
+}
+.bottom-nav-grid{display:grid;grid-template-columns:repeat(5,1fr)}
+.bnav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;border-radius:var(--radius-sm);cursor:pointer;
+  color:var(--muted);transition:color var(--transition);border:none;background:none;
+  font-family:var(--font);
+}
+.bnav-item.active{color:var(--cyan)}
+.bnav-icon{font-size:1.2rem}
+.bnav-label{font-size:.6rem;font-weight:600;letter-spacing:.3px}
+
+/* ════════════════════════════════════════
+   TABS
+════════════════════════════════════════ */
+.tabs{display:flex;gap:3px;background:var(--bg2);border-radius:var(--radius-sm);padding:3px;width:fit-content;flex-wrap:wrap}
+.tab-btn{
+  padding:7px 16px;border-radius:7px;font-size:.78rem;font-weight:600;
+  cursor:pointer;border:none;background:none;color:var(--muted);
+  font-family:var(--font);transition:all var(--transition);white-space:nowrap;
+}
+.tab-btn.active{background:var(--surface2);color:var(--cyan)}
+.tab-content{display:none;margin-top:18px}
+.tab-content.active{display:block}
+
+/* ════════════════════════════════════════
+   SEARCH
+════════════════════════════════════════ */
+.search-wrap{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:7px 12px;
+}
+.search-wrap:focus-within{border-color:var(--cyan)}
+.search-inp{
+  background:none;border:none;color:var(--text);font-family:var(--font);
+  font-size:.85rem;flex:1;min-width:0;
+}
+.search-inp:focus{outline:none}
+.search-inp::placeholder{color:var(--muted)}
+
+/* ════════════════════════════════════════
+   DIVIDER / SPACER
+════════════════════════════════════════ */
+.spacer{height:16px}.spacer-sm{height:10px}.spacer-lg{height:24px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* ════════════════════════════════════════
+   MSP / IDENTITY PANEL
+════════════════════════════════════════ */
+.msp-card{
+  background:linear-gradient(135deg,rgba(167,139,250,.08),rgba(56,189,248,.05));
+  border:1px solid rgba(167,139,250,.2);border-radius:var(--radius);padding:20px;
+}
+.cert-block{
+  background:#000d1a;border:1px solid rgba(56,189,248,.1);border-radius:8px;
+  padding:12px;font-family:var(--mono);font-size:.68rem;color:var(--green);
+  max-height:140px;overflow-y:auto;word-break:break-all;line-height:1.6;
+}
+
+/* ════════════════════════════════════════
+   CHANNEL CARDS
+════════════════════════════════════════ */
+.channel-card{
+  border:2px solid var(--border);border-radius:var(--radius);
+  padding:18px;cursor:pointer;transition:all var(--transition);
+  background:var(--surface);
+}
+.channel-card:hover,.channel-card.selected{
+  border-color:var(--cyan);background:rgba(56,189,248,.04);
+  box-shadow:0 0 20px rgba(56,189,248,.1);
+}
+.channel-name{font-weight:700;font-size:.95rem}
+.channel-cc{font-family:var(--mono);font-size:.72rem;color:var(--cyan);margin-top:4px}
+.channel-peers{font-size:.75rem;color:var(--text2);margin-top:8px}
+
+/* ════════════════════════════════════════
+   ROUTE SVG MAP
+════════════════════════════════════════ */
+.route-wrap{background:var(--bg2);border-radius:var(--radius-sm);padding:20px;overflow:hidden}
+
+/* ════════════════════════════════════════
+   RESPONSIVE — TABLET ≤1024
+════════════════════════════════════════ */
+@media(max-width:1024px){
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(2,1fr)}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay{display:block}
+  .main{margin-left:0}
+  .nav-burger{display:flex}
+  .nav-mid{display:none}
+  .bottom-nav{display:block}
+  .main{padding-bottom:80px}
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE — MOBILE ≤600
+════════════════════════════════════════ */
+@media(max-width:600px){
+  .topnav{padding:0 12px;gap:8px}
+  .nav-logo span{display:none}
+  .net-pill span{display:none}
+  .main{padding:14px 12px}
+  .page-header{flex-direction:column;align-items:flex-start}
+  .page-actions{width:100%;justify-content:flex-end}
+  .grid-4,.grid-3,.grid-2{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .modal{max-width:100%;border-radius:var(--radius) var(--radius) 0 0;margin:auto 0 0;max-height:85vh}
+  .modal-overlay{align-items:flex-end}
+  .channel-selector{display:none}
+  .auth-name{display:none}
+  table{min-width:500px}
+}
+
+/* ════════════════════════════════════════
+   LOADING
+════════════════════════════════════════ */
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--cyan);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-wrap{display:flex;align-items:center;justify-content:center;padding:40px;flex-direction:column;gap:12px;color:var(--muted)}
+
+/* ════════════════════════════════════════
+   ANIMATIONS
+════════════════════════════════════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .5s ease forwards}
+.fade-up-1{animation-delay:.05s;opacity:0}
+.fade-up-2{animation-delay:.1s;opacity:0}
+.fade-up-3{animation-delay:.15s;opacity:0}
+.fade-up-4{animation-delay:.2s;opacity:0}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <button class="nav-burger" id="navBurger" onclick="toggleSidebar()" aria-label="Menu">
+    <span class="burger-bar"></span>
+    <span class="burger-bar"></span>
+    <span class="burger-bar"></span>
+  </button>
+  <a class="nav-logo" href="#">
+    <div class="logo-hex">⬡</div>
+    <span>ChainTrace</span>
+  </a>
+  <div class="nav-mid" id="navMid">
+    <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('products',this)">Products</button>
+    <button class="nav-tab" onclick="showPage('shipments',this)">Shipments</button>
+    <button class="nav-tab" onclick="showPage('contracts',this)">Contracts</button>
+    <button class="nav-tab" onclick="showPage('identity',this)">Identity</button>
+    <button class="nav-tab" onclick="showPage('analytics',this)">Analytics</button>
+  </div>
+  <div class="nav-right">
+    <select class="channel-selector" id="channelSelect" onchange="switchChannel(this.value)">
+      <option value="supply-chain-01">supply-chain-01</option>
+      <option value="supply-chain-02">supply-chain-02</option>
+      <option value="pharma-channel">pharma-channel</option>
+      <option value="food-channel">food-channel</option>
+      <option value="electronics-channel">electronics-channel</option>
+    </select>
+    <div class="net-pill"><div class="pulse"></div><span id="netLabel">CONNECTED</span></div>
+    <div class="auth-pill" onclick="showPage('identity')">
+      <div class="auth-avatar" id="userAvatar">A</div>
+      <span class="auth-name" id="userName">admin</span>
+    </div>
+  </div>
+</nav>
+
+<!-- SIDEBAR -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Main</div>
+    <button class="sidebar-link active" onclick="showPage('dashboard',this,true)"><span class="icon">📊</span>Dashboard</button>
+    <button class="sidebar-link" onclick="showPage('products',this,true)"><span class="icon">📦</span>Products</button>
+    <button class="sidebar-link" onclick="showPage('shipments',this,true)"><span class="icon">🚚</span>Shipments</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Blockchain</div>
+    <button class="sidebar-link" onclick="showPage('contracts',this,true)"><span class="icon">⬡</span>Chaincode</button>
+    <button class="sidebar-link" onclick="showPage('channels',this,true)"><span class="icon">🔗</span>Channels</button>
+    <button class="sidebar-link" onclick="showPage('ledger',this,true)"><span class="icon">📜</span>Ledger</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Network</div>
+    <button class="sidebar-link" onclick="showPage('identity',this,true)"><span class="icon">🔐</span>Identity / MSP</button>
+    <button class="sidebar-link" onclick="showPage('analytics',this,true)"><span class="icon">📈</span>Analytics</button>
+    <button class="sidebar-link" onclick="showPage('events',this,true)">
+      <span class="icon">📡</span>Live Events
+      <span class="sidebar-badge green" id="sseCount">0</span>
+    </button>
+  </div>
+  <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border)">
+    <div style="font-size:.72rem;color:var(--muted);padding:0 8px;font-family:var(--mono)">
+      <div>API: <span style="color:var(--green)" id="apiStatus">●</span> <span id="apiUrl">localhost:3001</span></div>
+      <div style="margin-top:4px">Channel: <span style="color:var(--cyan)" id="currentChannelLabel">supply-chain-01</span></div>
+      <div style="margin-top:4px">MSP: <span style="color:var(--violet)" id="currentMSP">Org1MSP</span></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div class="page active fade-up" id="page-dashboard">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Real-time supply chain overview · <span id="dashChannel">supply-chain-01</span></div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost btn-sm" onclick="refreshAll()">↺ Refresh</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('product')">+ Register Product</button>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="grid-4 fade-up-1">
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="metric-icon" style="background:rgba(56,189,248,.1)">📦</div>
+        <div class="metric-val td-cyan" id="mProducts">—</div>
+        <div class="metric-lbl">Products Tracked</div>
+        <div class="metric-chg chg-up">▲ 8.3% this month</div>
+      </div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="metric-icon" style="background:rgba(52,211,153,.1)">🚚</div>
+        <div class="metric-val" style="color:var(--green)" id="mShipments">—</div>
+        <div class="metric-lbl">Active Shipments</div>
+        <div class="metric-chg chg-up">▲ 5.1%</div>
+      </div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="metric-icon" style="background:rgba(167,139,250,.1)">⬡</div>
+        <div class="metric-val" style="color:var(--violet)" id="mTxs">—</div>
+        <div class="metric-lbl">Transactions</div>
+        <div class="metric-chg chg-up">▲ 12%</div>
+      </div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-body">
+        <div class="metric-icon" style="background:rgba(248,113,113,.1)">⚠️</div>
+        <div class="metric-val" style="color:var(--red)" id="mFlags">14</div>
+        <div class="metric-lbl">Flagged Items</div>
+        <div class="metric-chg chg-dn">▼ 23%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Live Chain + Events grid -->
+  <div class="grid-2 fade-up-2" style="grid-template-columns:2fr 1fr">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">
+          <div class="dot" style="background:var(--green);animation:pulse 2s infinite"></div>
+          Live Blockchain Ledger
+          <span class="badge badge-green" style="margin-left:auto">MINING</span>
+        </div>
+        <div class="chain-scroll" id="chainScroll">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title"><div class="dot" style="background:var(--cyan);animation:pulse 1.5s infinite"></div>Live Events</div>
+        <div class="live-feed" id="dashFeed">
+          <div class="loading-wrap" style="padding:20px"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Recent Transactions -->
+  <div class="card fade-up-3">
+    <div class="card-body">
+      <div class="card-title">Recent Transactions</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>TX Hash</th><th>Function</th><th>Asset ID</th>
+            <th>Submitted By</th><th>Block</th><th>Time</th><th>Status</th>
+          </tr></thead>
+          <tbody id="txTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PRODUCTS ═══════════ -->
+<div class="page fade-up" id="page-products">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Product Registry</div>
+      <div class="page-sub">Immutable product records on Hyperledger Fabric</div>
+    </div>
+    <div class="page-actions">
+      <div class="search-wrap"><span>🔍</span><input class="search-inp" id="productSearch" placeholder="Search ID, name, category..." oninput="filterProducts(this.value)"></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('product')">+ Register</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Product ID</th><th>Name</th><th>Category</th><th>Origin</th>
+            <th>Location</th><th>Owner (MSP)</th><th>Authenticity</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="productTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SHIPMENTS ═══════════ -->
+<div class="page fade-up" id="page-shipments">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Shipment Tracking</div>
+      <div class="page-sub">Multi-stop blockchain-verified route management</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal('shipment')">+ Create Shipment</button>
+    </div>
+  </div>
+
+  <!-- Route Map -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">Live Route — SHP-2024-0891</div>
+      <div class="route-wrap">
+        <svg width="100%" height="130" viewBox="0 0 900 130" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="rg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#34d399"/>
+              <stop offset="60%" stop-color="#38bdf8"/>
+              <stop offset="100%" stop-color="#4a6a8a"/>
+            </linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M80,65 L820,65" stroke="url(#rg)" stroke-width="2" fill="none" stroke-dasharray="6 4" filter="url(#glow)"/>
+          <!-- Nodes -->
+          <g transform="translate(80,65)"><circle r="9" fill="#34d399" filter="url(#glow)"/><text y="28" text-anchor="middle" fill="#4a6a8a" font-size="11" font-family="IBM Plex Mono">Shanghai</text><text y="42" text-anchor="middle" fill="#34d399" font-size="9" font-family="IBM Plex Mono">DEPARTED</text></g>
+          <g transform="translate(270,65)"><circle r="9" fill="#34d399" filter="url(#glow)"/><text y="28" text-anchor="middle" fill="#4a6a8a" font-size="11" font-family="IBM Plex Mono">Singapore</text><text y="42" text-anchor="middle" fill="#34d399" font-size="9" font-family="IBM Plex Mono">CLEARED</text></g>
+          <g transform="translate(460,65)">
+            <circle r="11" fill="#38bdf8" filter="url(#glow)"/>
+            <text y="28" text-anchor="middle" fill="#4a6a8a" font-size="11" font-family="IBM Plex Mono">Dubai</text>
+            <text y="42" text-anchor="middle" fill="#38bdf8" font-size="9" font-family="IBM Plex Mono">◄ IN TRANSIT</text>
+            <circle r="20" fill="none" stroke="#38bdf8" stroke-width="1.5" opacity=".5"><animate attributeName="r" values="13;24;13" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values=".7;0;.7" dur="2s" repeatCount="indefinite"/></circle>
+          </g>
+          <g transform="translate(650,65)"><circle r="8" fill="none" stroke="#4a6a8a" stroke-width="2"/><text y="28" text-anchor="middle" fill="#4a6a8a" font-size="11" font-family="IBM Plex Mono">Rotterdam</text><text y="42" text-anchor="middle" fill="#4a6a8a" font-size="9" font-family="IBM Plex Mono">PENDING</text></g>
+          <g transform="translate(820,65)"><circle r="8" fill="none" stroke="#4a6a8a" stroke-width="2"/><text y="28" text-anchor="middle" fill="#4a6a8a" font-size="11" font-family="IBM Plex Mono">London</text><text y="42" text-anchor="middle" fill="#4a6a8a" font-size="9" font-family="IBM Plex Mono">DESTINATION</text></g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">All Shipments</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Shipment ID</th><th>Products</th><th>Route</th>
+            <th>Carrier</th><th>ETA</th><th>Progress</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="shipmentTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SMART CONTRACTS ═══════════ -->
+<div class="page fade-up" id="page-contracts">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Smart Contract (Chaincode)</div>
+      <div class="page-sub">Hyperledger Fabric Go chaincode management</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-violet btn-sm" onclick="openModal('deploy')">▶ Deploy New Version</button>
+    </div>
+  </div>
+
+  <div class="grid-2" style="grid-template-columns:3fr 2fr">
+    <!-- Code panel -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div><span style="font-weight:700">supply-chain-cc</span> <span class="badge badge-green" style="margin-left:8px">ACTIVE v3.1.0</span></div>
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('contractTab','go',this)">Go</button>
+            <button class="tab-btn" onclick="switchTab('contractTab','js',this)">JS SDK</button>
+            <button class="tab-btn" onclick="switchTab('contractTab','curl',this)">cURL</button>
+          </div>
+        </div>
+        <div id="contractTab">
+          <div class="tab-content active" id="contractTab-go">
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode('goCode')">Copy</button>
+              <pre id="goCode"><span class="cm">// supply-chain-cc — Hyperledger Fabric v2.5</span>
+<span class="kw">package</span> <span class="type">main</span>
+
+<span class="kw">import</span> (
+  <span class="str">"encoding/json"</span>
+  <span class="str">"fmt"</span>
+  <span class="str">"time"</span>
+  <span class="str">"github.com/hyperledger/fabric-contract-api-go/contractapi"</span>
+)
+
+<span class="kw">type</span> <span class="type">SmartContract</span> <span class="kw">struct</span> {
+  contractapi.<span class="type">Contract</span>
+}
+
+<span class="kw">type</span> <span class="type">Product</span> <span class="kw">struct</span> {
+  ID           <span class="type">string</span>                 <span class="str">`json:"id"`</span>
+  Name         <span class="type">string</span>                 <span class="str">`json:"name"`</span>
+  Category     <span class="type">string</span>                 <span class="str">`json:"category"`</span>
+  Owner        <span class="type">string</span>                 <span class="str">`json:"owner"`</span>
+  Location     <span class="type">string</span>                 <span class="str">`json:"location"`</span>
+  Status       <span class="type">string</span>                 <span class="str">`json:"status"`</span>
+  Timestamp    <span class="type">string</span>                 <span class="str">`json:"timestamp"`</span>
+  Hash         <span class="type">string</span>                 <span class="str">`json:"hash"`</span>
+  Attributes   <span class="kw">map</span>[<span class="type">string</span>]<span class="type">string</span>      <span class="str">`json:"attributes"`</span>
+}
+
+<span class="kw">func</span> (s *<span class="type">SmartContract</span>) <span class="fn">RegisterProduct</span>(
+  ctx contractapi.<span class="type">TransactionContextInterface</span>,
+  productId <span class="type">string</span>, productJSON <span class="type">string</span>,
+) <span class="type">error</span> {
+  exists, err := s.<span class="fn">productExists</span>(ctx, productId)
+  <span class="kw">if</span> err != <span class="num">nil</span> { <span class="kw">return</span> err }
+  <span class="kw">if</span> exists {
+    <span class="kw">return</span> fmt.<span class="fn">Errorf</span>(<span class="str">"product %s already exists"</span>, productId)
+  }
+  mspId, _ := ctx.GetClientIdentity().<span class="fn">GetMSPID</span>()
+  txTimestamp, _ := ctx.GetStub().<span class="fn">GetTxTimestamp</span>()
+  
+  <span class="kw">var</span> product <span class="type">Product</span>
+  json.<span class="fn">Unmarshal</span>([]<span class="type">byte</span>(productJSON), &product)
+  product.Timestamp = time.<span class="fn">Unix</span>(txTimestamp.Seconds, <span class="num">0</span>).<span class="fn">Format</span>(time.RFC3339)
+  product.Owner = mspId
+  
+  data, _ := json.<span class="fn">Marshal</span>(product)
+  ctx.GetStub().<span class="fn">SetEvent</span>(<span class="str">"ProductRegistered"</span>, data)
+  <span class="kw">return</span> ctx.GetStub().<span class="fn">PutState</span>(productId, data)
+}
+
+<span class="kw">func</span> (s *<span class="type">SmartContract</span>) <span class="fn">TransferOwnership</span>(
+  ctx contractapi.<span class="type">TransactionContextInterface</span>,
+  productId, newOwner, newLocation,
+  reason, submitter, timestamp <span class="type">string</span>,
+) <span class="type">error</span> {
+  product, err := s.<span class="fn">QueryProduct</span>(ctx, productId)
+  <span class="kw">if</span> err != <span class="num">nil</span> { <span class="kw">return</span> err }
+  product.Owner = newOwner
+  product.Location = newLocation
+  product.Status = <span class="str">"IN_TRANSIT"</span>
+  product.Timestamp = timestamp
+  data, _ := json.<span class="fn">Marshal</span>(product)
+  ctx.GetStub().<span class="fn">SetEvent</span>(<span class="str">"OwnershipTransferred"</span>, data)
+  <span class="kw">return</span> ctx.GetStub().<span class="fn">PutState</span>(productId, data)
+}</pre>
+            </div>
+          </div>
+          <div class="tab-content" id="contractTab-js">
+            <div class="code-block">
+              <pre><span class="cm">// Fabric Node.js SDK — ChainTrace API Client</span>
+<span class="kw">const</span> axios = <span class="fn">require</span>(<span class="str">'axios'</span>);
+
+<span class="kw">const</span> API = <span class="str">'http://localhost:3001/api/v1'</span>;
+<span class="kw">let</span> token; <span class="cm">// JWT from /auth/login</span>
+
+<span class="cm">// Authenticate</span>
+<span class="kw">async function</span> <span class="fn">login</span>(userId, password) {
+  <span class="kw">const</span> { data } = <span class="kw">await</span> axios.<span class="fn">post</span>(<span class="str">`${API}/auth/login`</span>, 
+    { userId, password });
+  token = data.data.token;
+  <span class="kw">return</span> data;
+}
+
+<span class="cm">// Register product on blockchain</span>
+<span class="kw">async function</span> <span class="fn">registerProduct</span>(product, channel = <span class="str">'supply-chain-01'</span>) {
+  <span class="kw">return</span> axios.<span class="fn">post</span>(<span class="str">`${API}/products`</span>, product, {
+    headers: {
+      Authorization: <span class="str">`Bearer ${token}`</span>,
+      <span class="str">'x-channel'</span>: channel,
+    }
+  });
+}
+
+<span class="cm">// Transfer ownership</span>
+<span class="kw">async function</span> <span class="fn">transferOwnership</span>(productId, newOwner, location) {
+  <span class="kw">return</span> axios.<span class="fn">put</span>(<span class="str">`${API}/products/${productId}/transfer`</span>,
+    { newOwner, newLocation: location },
+    { headers: { Authorization: <span class="str">`Bearer ${token}`</span> } }
+  );
+}
+
+<span class="cm">// Subscribe to live events (SSE)</span>
+<span class="kw">const</span> evts = <span class="kw">new</span> <span class="fn">EventSource</span>(
+  <span class="str">`${API}/events/stream?channel=supply-chain-01`</span>
+);
+evts.<span class="fn">onmessage</span> = (e) => console.<span class="fn">log</span>(JSON.<span class="fn">parse</span>(e.data));</pre>
+            </div>
+          </div>
+          <div class="tab-content" id="contractTab-curl">
+            <div class="code-block">
+              <pre><span class="cm"># ── Enroll Admin ──────────────────────────</span>
+curl -X POST http://localhost:3001/api/v1/auth/enroll-admin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orgName": "Org1",
+    "adminId": "admin",
+    "adminSecret": "adminpw",
+    "caUrl": "https://ca.org1.example.com:7054",
+    "caName": "ca-org1"
+  }'
+
+<span class="cm"># ── Register User with MSP Certificate ────</span>
+curl -X POST http://localhost:3001/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "alice",
+    "orgName": "Org1",
+    "adminId": "admin",
+    "role": "client",
+    "password": "alice123"
+  }'
+
+<span class="cm"># ── Register Product (with channel header) ─</span>
+curl -X POST http://localhost:3001/api/v1/products \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-channel: supply-chain-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Organic Coffee",
+    "category": "Food & Beverage",
+    "origin": "Ethiopia",
+    "manufacturer": "FarmCo"
+  }'
+
+<span class="cm"># ── Transfer Ownership ─────────────────────</span>
+curl -X PUT http://localhost:3001/api/v1/products/PRD-ABC/transfer \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-channel: supply-chain-01" \
+  -d '{"newOwner":"Org2MSP","newLocation":"Singapore Port"}'
+
+<span class="cm"># ── Cross-Channel Query ────────────────────</span>
+curl -X POST http://localhost:3001/api/v1/channels/cross-channel-query \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"assetId":"PRD-ABC","channels":["supply-chain-01","pharma-channel"]}'
+
+<span class="cm"># ── SSE Live Events ────────────────────────</span>
+curl -N -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:3001/api/v1/events/stream?channel=supply-chain-01"</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contract functions -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Functions</div>
+          <div id="contractFnList" style="display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Chaincode Stats</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="ccStats"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Endorsement Policy</div>
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--amber);background:var(--bg2);padding:10px;border-radius:8px;border:1px solid var(--border)">
+            AND(<br>&nbsp;&nbsp;'Org1MSP.peer',<br>&nbsp;&nbsp;'Org2MSP.peer',<br>&nbsp;&nbsp;'Org3MSP.peer'<br>)
+          </div>
+          <div class="spacer-sm"></div>
+          <div style="font-size:.75rem;color:var(--text2)">Requires 3 of 6 organization signatures for transaction endorsement.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CHANNELS ═══════════ -->
+<div class="page fade-up" id="page-channels">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Multi-Channel Network</div>
+      <div class="page-sub">Hyperledger Fabric channel topology</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="openModal('crossQuery')">⟷ Cross-Channel Query</button>
+    </div>
+  </div>
+
+  <!-- Channel cards -->
+  <div class="grid-auto" id="channelGrid"></div>
+
+  <div class="spacer-lg"></div>
+
+  <!-- Cross-channel query result -->
+  <div class="card" id="crossQueryCard" style="display:none">
+    <div class="card-body">
+      <div class="card-title">Cross-Channel Query Result</div>
+      <div id="crossQueryResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LEDGER ═══════════ -->
+<div class="page fade-up" id="page-ledger">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Blockchain Ledger</div>
+      <div class="page-sub">Immutable distributed ledger state</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openModal('query')">🔍 Query Asset</button>
+    </div>
+  </div>
+
+  <!-- Block explorer -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">Block Explorer</div>
+      <div class="chain-scroll" id="ledgerChain"></div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="card">
+    <div class="card-body">
+      <div class="card-title">Transaction Log</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>TX Hash</th><th>Function</th><th>Block</th><th>Asset</th><th>Actor</th><th>Time</th><th>Status</th></tr></thead>
+          <tbody id="ledgerTxBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ IDENTITY / MSP ═══════════ -->
+<div class="page fade-up" id="page-identity">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Identity & MSP</div>
+      <div class="page-sub">Fabric CA certificate management</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-violet btn-sm" onclick="openModal('enroll')">⊕ Enroll Admin</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('register')">+ Register User</button>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Current Identity -->
+    <div>
+      <div class="msp-card">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--violetD));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#000" id="idAvatar">A</div>
+          <div>
+            <div style="font-weight:800;font-size:1rem" id="idName">admin</div>
+            <div style="font-family:var(--mono);font-size:.72rem;color:var(--violet);margin-top:2px" id="idMSP">Org1MSP</div>
+            <span class="badge badge-green">Active</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div><div style="font-size:.67rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase">Role</div><div style="font-weight:600;margin-top:3px" id="idRole">admin</div></div>
+          <div><div style="font-size:.67rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase">Org</div><div style="font-weight:600;margin-top:3px" id="idOrg">Org1</div></div>
+          <div><div style="font-size:.67rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase">Token Expiry</div><div style="font-family:var(--mono);font-size:.78rem;color:var(--amber);margin-top:3px">24h</div></div>
+          <div><div style="font-size:.67rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase">Channel Access</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--green);margin-top:3px">5 channels</div></div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-bottom:6px">X.509 Certificate (PEM)</div>
+        <div class="cert-block">-----BEGIN CERTIFICATE-----
+MIICpDCCAYwCFGK2n8Q3xKi0tBz7kV5h3...
+[Connected to Fabric CA — certificate will appear after enrollment]
+Org1MSP · ECDSA P256 · SHA256withECDSA
+Issuer: CN=ca.org1.example.com
+Subject: CN=admin, OU=client, O=Hyperledger
+Not Before: 2024-01-01 · Not After: 2025-01-01
+-----END CERTIFICATE-----</div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Login / Auth Panel -->
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">API Authentication</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="form-group">
+              <label class="form-label">User ID</label>
+              <input class="form-input" id="loginUser" value="admin" placeholder="admin">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password / Enrollmt Secret</label>
+              <input class="form-input" id="loginPass" type="password" value="adminpw" placeholder="adminpw">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">🔐 Authenticate & Get JWT</button>
+            <div id="tokenDisplay" style="display:none">
+              <div class="cert-block" id="tokenVal" style="color:var(--amber);font-size:.65rem;word-break:break-all;max-height:80px"></div>
+              <div style="font-size:.7rem;color:var(--green);margin-top:6px">✓ JWT stored — API calls authorized</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet identities -->
+    <div>
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="card-title" style="margin-bottom:0">Wallet Identities</div>
+            <button class="btn btn-ghost btn-xs" onclick="loadWallet()">↺ Refresh</button>
+          </div>
+          <div id="walletList" style="display:flex;flex-direction:column;gap:8px">
+            <div class="loading-wrap" style="padding:20px"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Organization MSPs</div>
+          <div id="orgMspList" style="display:flex;flex-direction:column;gap:7px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ANALYTICS ═══════════ -->
+<div class="page fade-up" id="page-analytics">
+  <div class="page-header">
+    <div><div class="page-title">Analytics</div><div class="page-sub">Network performance and supply chain metrics</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Transaction Volume (7 Days)</div>
+        <canvas id="txChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Network Topology</div>
+        <div class="canvas-wrap"><canvas id="netCanvas" width="400" height="280"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Products by Status</div>
+        <div id="statusChart" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Channel Activity</div>
+        <div id="channelActivity" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Block Times</div>
+        <div id="blockTimes" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EVENTS ═══════════ -->
+<div class="page fade-up" id="page-events">
+  <div class="page-header">
+    <div><div class="page-title">Live Events (SSE)</div><div class="page-sub">Real-time chaincode event stream from Hyperledger Fabric</div></div>
+    <div class="page-actions">
+      <button class="btn btn-green btn-sm" id="sseToggle" onclick="toggleSSE()">● Listening</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearEvents()">Clear</button>
+    </div>
+  </div>
+  <div class="grid-2" style="grid-template-columns:2fr 1fr">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title">Event Stream</div>
+        <div class="live-feed" id="eventsFullFeed" style="max-height:460px"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">Event Stats</div>
+          <div style="display:flex;flex-direction:column;gap:10px" id="eventStats"></div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="card">
+        <div class="card-body">
+          <div class="card-title">SSE Config</div>
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--text2)">
+            <div>Endpoint: <span style="color:var(--cyan)">/api/v1/events/stream</span></div>
+            <div style="margin-top:6px">Channel: <span style="color:var(--green)" id="sseChannel">supply-chain-01</span></div>
+            <div style="margin-top:6px">Heartbeat: <span style="color:var(--amber)">30s</span></div>
+            <div style="margin-top:6px">Events rcvd: <span style="color:var(--cyan)" id="sseTotalEvents">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-grid">
+    <button class="bnav-item active" onclick="showPage('dashboard',this)" data-page="dashboard"><div class="bnav-icon">📊</div><div class="bnav-label">Dashboard</div></button>
+    <button class="bnav-item" onclick="showPage('products',this)" data-page="products"><div class="bnav-icon">📦</div><div class="bnav-label">Products</div></button>
+    <button class="bnav-item" onclick="showPage('shipments',this)" data-page="shipments"><div class="bnav-icon">🚚</div><div class="bnav-label">Ships</div></button>
+    <button class="bnav-item" onclick="showPage('identity',this)" data-page="identity"><div class="bnav-icon">🔐</div><div class="bnav-label">Identity</div></button>
+    <button class="bnav-item" onclick="showPage('analytics',this)" data-page="analytics"><div class="bnav-icon">📈</div><div class="bnav-label">Analytics</div></button>
+  </div>
+</nav>
+
+<!-- ════ MODALS ════ -->
+
+<!-- Register Product -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📦 Register Product</div>
+      <button class="modal-close" onclick="closeModal('product')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Product Name *</label><input class="form-input" id="pName" placeholder="e.g. Organic Coffee Beans"></div>
+        <div class="form-group"><label class="form-label">Batch Number</label><input class="form-input" id="pBatch" placeholder="BCH-2024-001"></div>
+        <div class="form-group"><label class="form-label">Category *</label>
+          <select class="form-select" id="pCat">
+            <option>Food & Beverage</option><option>Pharmaceuticals</option><option>Electronics</option><option>Textiles</option><option>Chemicals</option><option>Automotive</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Origin Country *</label><input class="form-input" id="pOrigin" placeholder="Ethiopia"></div>
+        <div class="form-group"><label class="form-label">Manufacturer *</label><input class="form-input" id="pMfr" placeholder="Organization name"></div>
+        <div class="form-group"><label class="form-label">Serial Number</label><input class="form-input" id="pSerial" placeholder="SN-2024-XXXXX"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">Description</label><textarea class="form-textarea" id="pDesc" placeholder="Brief product description..."></textarea></div>
+      <div style="background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15);border-radius:8px;padding:10px;margin-top:12px;font-size:.75rem;color:var(--text2)">
+        ⬡ Will submit to <strong style="color:var(--cyan)" id="pChannel">supply-chain-01</strong> via <strong>RegisterProduct()</strong> chaincode
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" style="flex:1" id="pSubmitBtn" onclick="submitProduct()">⬡ Commit to Blockchain</button>
+        <button class="btn btn-ghost" onclick="closeModal('product')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Shipment -->
+<div class="modal-overlay" id="modal-shipment">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🚚 Create Shipment</div>
+      <button class="modal-close" onclick="closeModal('shipment')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Origin *</label><input class="form-input" id="sOrigin" placeholder="Shanghai, China"></div>
+        <div class="form-group"><label class="form-label">Destination *</label><input class="form-input" id="sDest" placeholder="Rotterdam, Netherlands"></div>
+        <div class="form-group"><label class="form-label">Carrier *</label>
+          <select class="form-select" id="sCarrier"><option>Maersk</option><option>MSC</option><option>COSCO</option><option>DHL Express</option><option>FedEx Freight</option><option>UPS Supply Chain</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Estimated Delivery *</label><input class="form-input" id="sETA" type="date"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">Product IDs (comma separated) *</label><input class="form-input" id="sPids" placeholder="PRD-001, PRD-002, PRD-003"></div>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="form-group"><label class="form-label">Temperature Req (°C)</label><input class="form-input" id="sTemp" type="number" placeholder="-18 to 25"></div>
+        <div class="form-group"><label class="form-label">Humidity Req (%)</label><input class="form-input" id="sHumidity" type="number" placeholder="40-60"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-green" style="flex:1" id="sSubmitBtn" onclick="submitShipment()">⬡ Deploy Shipment Contract</button>
+        <button class="btn btn-ghost" onclick="closeModal('shipment')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enroll Admin -->
+<div class="modal-overlay" id="modal-enroll">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Enroll CA Admin</div>
+      <button class="modal-close" onclick="closeModal('enroll')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Organization *</label><input class="form-input" id="eOrg" placeholder="Org1"></div>
+        <div class="form-group"><label class="form-label">Admin ID *</label><input class="form-input" id="eAdmin" placeholder="admin" value="admin"></div>
+        <div class="form-group"><label class="form-label">Enrollment Secret *</label><input class="form-input" id="eSecret" type="password" placeholder="adminpw"></div>
+        <div class="form-group"><label class="form-label">CA Name</label><input class="form-input" id="eCaName" placeholder="ca-org1"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">CA URL *</label><input class="form-input" id="eCaUrl" placeholder="https://ca.org1.example.com:7054"></div>
+      <div style="margin-top:12px;padding:10px;background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.15);border-radius:8px;font-size:.75rem;color:var(--text2)">
+        This will contact the Fabric CA, issue an X.509 certificate, and store the identity in the local wallet.
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-violet" style="flex:1" id="eSubmitBtn" onclick="submitEnroll()">⬡ Enroll & Get Certificate</button>
+        <button class="btn btn-ghost" onclick="closeModal('enroll')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Register User -->
+<div class="modal-overlay" id="modal-register">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👤 Register New User</div>
+      <button class="modal-close" onclick="closeModal('register')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">User ID *</label><input class="form-input" id="rUser" placeholder="alice"></div>
+        <div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="rPass" type="password" placeholder="securePass123"></div>
+        <div class="form-group"><label class="form-label">Organization *</label><input class="form-input" id="rOrg" placeholder="Org1"></div>
+        <div class="form-group"><label class="form-label">Role</label>
+          <select class="form-select" id="rRole"><option value="client">client</option><option value="admin">admin</option><option value="peer">peer</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Admin ID (authorizing)</label><input class="form-input" id="rAdmin" value="admin"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" style="flex:1" id="rSubmitBtn" onclick="submitRegister()">Register & Enroll</button>
+        <button class="btn btn-ghost" onclick="closeModal('register')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deploy Chaincode -->
+<div class="modal-overlay" id="modal-deploy">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">▶ Deploy Chaincode</div>
+      <button class="modal-close" onclick="closeModal('deploy')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Channel</label><select class="form-select" id="dChannel"><option>supply-chain-01</option><option>supply-chain-02</option><option>pharma-channel</option></select></div>
+        <div class="form-group"><label class="form-label">Version</label><input class="form-input" id="dVersion" placeholder="v3.2.0"></div>
+        <div class="form-group"><label class="form-label">Chaincode Name</label><input class="form-input" id="dName" value="supply-chain-cc"></div>
+        <div class="form-group"><label class="form-label">Language</label><select class="form-select"><option>Go</option><option>Node.js</option><option>Java</option></select></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">Endorsement Policy</label><input class="form-input" id="dPolicy" value="AND('Org1MSP.peer','Org2MSP.peer')"></div>
+      <div style="margin-top:12px"><div class="form-label" style="margin-bottom:8px">Required Org Approvals</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="orgApprovalList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-violet" style="flex:1" onclick="submitDeploy()">▶ Deploy to Network</button>
+        <button class="btn btn-ghost" onclick="closeModal('deploy')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Query Asset -->
+<div class="modal-overlay" id="modal-query">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔍 Query Ledger</div>
+      <button class="modal-close" onclick="closeModal('query')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Asset ID / TX Hash</label><input class="form-input" id="qId" placeholder="PRD-001 or SHP-2024-..."></div>
+      <div class="form-group" style="margin-top:10px"><label class="form-label">Query Type</label>
+        <select class="form-select" id="qType"><option value="product">Product</option><option value="shipment">Shipment</option><option value="history">History</option></select>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="submitQuery()">Query Blockchain</button>
+      <div id="queryResult" style="display:none;margin-top:14px">
+        <div class="code-block"><pre id="queryOutput" style="color:var(--green)"></pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cross-Channel Query -->
+<div class="modal-overlay" id="modal-crossQuery">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⟷ Cross-Channel Query</div>
+      <button class="modal-close" onclick="closeModal('crossQuery')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Asset ID</label><input class="form-input" id="cqId" placeholder="PRD-001"></div>
+      <div class="form-group" style="margin-top:12px"><label class="form-label">Select Channels to Query</label>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px" id="cqChannels"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="submitCrossQuery()">Query All Channels</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+const CONFIG = {
+  apiBase: 'http://localhost:3001/api/v1',
+  defaultChannel: 'supply-chain-01',
+};
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const state = {
+  token: null,
+  user: { userId:'admin', mspId:'Org1MSP', role:'admin', org:'Org1' },
+  channel: 'supply-chain-01',
+  blocks: [],
+  txs: [],
+  products: [],
+  shipments: [],
+  events: [],
+  eventCounts: {},
+  sseActive: true,
+  sseSource: null,
+  nextBlock: 4729,
+  totalTxs: 48291,
+  sseTotalEvents: 0,
+};
+
+const CHANNELS = ['supply-chain-01','supply-chain-02','pharma-channel','food-channel','electronics-channel'];
+const CHANNEL_CC = {'supply-chain-01':'supply-chain-cc','supply-chain-02':'logistics-cc','pharma-channel':'pharma-cc','food-channel':'food-cc','electronics-channel':'electronics-cc'};
+const ORGS = [{id:'Org1MSP',name:'AgroSupply Co.',icon:'🌾'},{id:'Org2MSP',name:'PharmaCorp',icon:'💊'},{id:'Org3MSP',name:'TechLogix',icon:'⚡'},{id:'Org4MSP',name:'AutoParts Ltd.',icon:'🚗'},{id:'Org5MSP',name:'ChemTrade',icon:'🧪'},{id:'Org6MSP',name:'GlobalNet',icon:'🌐'}];
+const ACTIONS = ['RegisterProduct','TransferOwnership','CreateShipment','UpdateLocation','QualityCheck','DeliverProduct','FlagProduct','AddCheckpoint'];
+const STATUSES = ['REGISTERED','IN_TRANSIT','AT_WAREHOUSE','QUALITY_CHECK','DELIVERED','FLAGGED'];
+
+// ══════════════════════════════════════════════
+//  API HELPER
+// ══════════════════════════════════════════════
+async function api(method, path, body, channel) {
+  const headers = { 'Content-Type':'application/json' };
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  headers['x-channel'] = channel || state.channel;
+
+  try {
+    const res = await fetch(`${CONFIG.apiBase}${path}`, {
+      method, headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json();
+    if (!data.success && res.status !== 200) throw new Error(data.error || 'API error');
+    return data;
+  } catch (err) {
+    if (err.message.includes('Failed to fetch')) return null; // API offline — use mock
+    throw err;
+  }
+}
+
+// ══════════════════════════════════════════════
+//  MOCK DATA (fallback when API offline)
+// ══════════════════════════════════════════════
+function mockProducts() {
+  return [
+    { id:'PRD-A1B2C3', name:'Organic Coffee Beans', category:'Food & Beverage', origin:'Ethiopia', location:'Singapore Port', owner:'Org1MSP', authenticity:99.8, status:'IN_TRANSIT' },
+    { id:'PRD-D4E5F6', name:'Paracetamol 500mg', category:'Pharmaceuticals', origin:'India', location:'Frankfurt Warehouse', owner:'Org2MSP', authenticity:100, status:'DELIVERED' },
+    { id:'PRD-G7H8I9', name:'Lithium Battery Pack', category:'Electronics', origin:'China', location:'LA Port', owner:'Org3MSP', authenticity:98.2, status:'IN_TRANSIT' },
+    { id:'PRD-J1K2L3', name:'Cotton Textile Roll', category:'Textiles', origin:'Bangladesh', location:'Origin Warehouse', owner:'Org1MSP', authenticity:97.5, status:'REGISTERED' },
+    { id:'PRD-M4N5O6', name:'Automotive Bearings', category:'Automotive', origin:'Germany', location:'Rotterdam Port', owner:'Org4MSP', authenticity:99.1, status:'QUALITY_CHECK' },
+    { id:'PRD-P7Q8R9', name:'Chemical Solvent X7', category:'Chemicals', origin:'USA', location:'Ocean — In Transit', owner:'Org5MSP', authenticity:100, status:'IN_TRANSIT' },
+  ];
+}
+
+function mockShipments() {
+  return [
+    { id:'SHP-1735000001-A1B2', productIds:['PRD-A1B2C3','PRD-G7H8I9'], origin:'Shanghai', destination:'London', carrier:'Maersk', estimatedDelivery:'2024-03-15', progress:65, status:'IN_TRANSIT' },
+    { id:'SHP-1735000002-C3D4', productIds:['PRD-D4E5F6'], origin:'Mumbai', destination:'Rotterdam', carrier:'MSC', estimatedDelivery:'2024-03-10', progress:90, status:'IN_TRANSIT' },
+    { id:'SHP-1735000003-E5F6', productIds:['PRD-J1K2L3','PRD-P7Q8R9'], origin:'LA', destination:'Frankfurt', carrier:'DHL Express', estimatedDelivery:'2024-03-08', progress:100, status:'DELIVERED' },
+    { id:'SHP-1735000004-G7H8', productIds:['PRD-M4N5O6'], origin:'Guangzhou', destination:'NYC', carrier:'COSCO', estimatedDelivery:'2024-03-20', progress:30, status:'IN_TRANSIT' },
+  ];
+}
+
+// ══════════════════════════════════════════════
+//  DATA LOADING
+// ══════════════════════════════════════════════
+async function loadProducts() {
+  let products = state.products;
+  if (products.length === 0) {
+    const res = await api('GET', '/products');
+    products = res?.data?.records || mockProducts();
+    state.products = products;
+  }
+  updateMetrics();
+  renderProducts(products);
+}
+
+async function loadShipments() {
+  let shipments = state.shipments;
+  if (shipments.length === 0) {
+    const res = await api('GET', '/shipments');
+    shipments = res?.data?.records || mockShipments();
+    state.shipments = shipments;
+  }
+  renderShipments(shipments);
+}
+
+function updateMetrics() {
+  document.getElementById('mProducts').textContent = (state.products.length * 2141).toLocaleString();
+  document.getElementById('mShipments').textContent = state.shipments.filter(s=>s.status!=='DELIVERED').length.toLocaleString()+',291';
+  document.getElementById('mTxs').textContent = state.totalTxs.toLocaleString();
+}
+
+// ══════════════════════════════════════════════
+//  PRODUCT TABLE
+// ══════════════════════════════════════════════
+function statusBadge(s) {
+  const m = { REGISTERED:'badge-violet', IN_TRANSIT:'badge-cyan', AT_WAREHOUSE:'badge-amber', QUALITY_CHECK:'badge-amber', DELIVERED:'badge-green', FLAGGED:'badge-red' };
+  return m[s] || 'badge-cyan';
+}
+function statusLabel(s) { return s?.replace(/_/g,' ') || 'UNKNOWN'; }
+
+function renderProducts(products) {
+  document.getElementById('productTableBody').innerHTML = products.map(p => `
+    <tr>
+      <td class="td-mono td-cyan">${p.id}</td>
+      <td style="font-weight:600">${p.name}</td>
+      <td><span class="badge badge-violet">${p.category}</span></td>
+      <td>${p.origin}</td>
+      <td style="font-size:.8rem">${p.location || p.currentLocation || '—'}</td>
+      <td class="td-mono" style="font-size:.72rem">${p.owner}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress" style="width:60px"><div class="progress-fill" style="width:${p.authenticity||98}%;background:${p.authenticity>=99?'var(--green)':p.authenticity>=97?'var(--amber)':'var(--red)'}"></div></div>
+          <span class="td-mono" style="font-size:.72rem;color:${p.authenticity>=99?'var(--green)':p.authenticity>=97?'var(--amber)':'var(--red)'}">${p.authenticity||98}%</span>
+        </div>
+      </td>
+      <td><span class="badge ${statusBadge(p.status)}">${statusLabel(p.status)}</span></td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-ghost btn-xs" onclick="queryProduct('${p.id}')">History</button>
+          <button class="btn btn-outline btn-xs" onclick="transferProduct('${p.id}')">Transfer</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterProducts(v) {
+  const f = v.toLowerCase();
+  renderProducts(state.products.filter(p =>
+    p.id.toLowerCase().includes(f) || p.name.toLowerCase().includes(f) || p.category?.toLowerCase().includes(f)
+  ));
+}
+
+// ══════════════════════════════════════════════
+//  SHIPMENT TABLE
+// ══════════════════════════════════════════════
+function renderShipments(shipments) {
+  document.getElementById('shipmentTableBody').innerHTML = shipments.map(s => `
+    <tr>
+      <td class="td-mono td-cyan" style="font-size:.72rem">${s.id}</td>
+      <td class="td-mono" style="font-size:.75rem">${Array.isArray(s.productIds)?s.productIds.length:s.products||'—'} items</td>
+      <td style="font-size:.8rem">${s.origin} → ${s.destination}</td>
+      <td>${s.carrier}</td>
+      <td class="td-mono" style="font-size:.75rem">${s.estimatedDelivery||s.eta||'—'}</td>
+      <td style="min-width:130px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div class="progress" style="flex:1;height:5px"><div class="progress-fill" style="width:${s.progress||0}%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></div></div>
+          <span class="td-mono" style="font-size:.7rem">${s.progress||0}%</span>
+        </div>
+      </td>
+      <td><span class="badge ${statusBadge(s.status||'IN_TRANSIT')}">${statusLabel(s.status)}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-xs" onclick="toast('Tracking '+${JSON.stringify(s.id)}+'...','info')">Track</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  BLOCKCHAIN BLOCKS
+// ══════════════════════════════════════════════
+function rndHex(n=12){ return '0x'+ [...Array(n)].map(()=>'0123456789abcdef'[Math.random()*16|0]).join(''); }
+function rndInt(a,b){ return Math.random()*(b-a)+a|0; }
+function rndEl(arr){ return arr[Math.random()*arr.length|0]; }
+
+function initBlocks() {
+  const now = Date.now();
+  for (let i = 0; i < 8; i++) {
+    state.blocks.push({
+      num: state.nextBlock - (7 - i),
+      hash: rndHex(12),
+      txCount: rndInt(1, 9),
+      time: new Date(now - (7-i) * 2400).toLocaleTimeString(),
+    });
+  }
+  renderChain('chainScroll');
+  renderChain('ledgerChain');
+}
+
+function addBlock() {
+  state.nextBlock++;
+  state.totalTxs += rndInt(1,5);
+  state.blocks.push({ num: state.nextBlock, hash: rndHex(12), txCount: rndInt(1,9), time: new Date().toLocaleTimeString() });
+  if (state.blocks.length > 10) state.blocks.shift();
+  renderChain('chainScroll');
+  renderChain('ledgerChain');
+  document.getElementById('mTxs').textContent = state.totalTxs.toLocaleString();
+}
+
+function renderChain(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = state.blocks.map((b, i) => `
+    ${i > 0 ? '<div class="chain-arrow"></div>' : ''}
+    <div class="chain-block ${i===0?'genesis':i===state.blocks.length-1?'latest':''}">
+      <div class="block-num">BLOCK #${b.num}</div>
+      <div class="block-hash">${b.hash.slice(0,16)}…</div>
+      <div class="block-txs">${b.txCount} Transactions</div>
+      <div class="block-time">${b.time}</div>
+    </div>
+  `).join('');
+  el.scrollLeft = el.scrollWidth;
+}
+
+// ══════════════════════════════════════════════
+//  TRANSACTIONS
+// ══════════════════════════════════════════════
+function addTx(action, assetId) {
+  const tx = {
+    hash: rndHex(10),
+    action: action || rndEl(ACTIONS),
+    assetId: assetId || 'PRD-' + Math.random().toString(36).slice(2,8).toUpperCase(),
+    actor: rndEl(ORGS).id,
+    block: state.nextBlock,
+    time: new Date().toLocaleTimeString(),
+    success: Math.random() > 0.04,
+  };
+  state.txs.unshift(tx);
+  if (state.txs.length > 15) state.txs.pop();
+  renderTxTable('txTableBody');
+  renderTxTable('ledgerTxBody');
+}
+
+function renderTxTable(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = state.txs.map(t => `
+    <tr>
+      <td class="td-mono td-cyan" style="font-size:.72rem">${t.hash}</td>
+      <td><span class="badge badge-violet">${t.action}</span></td>
+      <td class="td-mono" style="font-size:.75rem">${t.assetId}</td>
+      <td style="font-size:.8rem">${t.actor}</td>
+      <td class="td-mono" style="font-size:.75rem">#${t.block}</td>
+      <td class="td-mono td-muted" style="font-size:.7rem">${t.time}</td>
+      <td><span class="badge ${t.success?'badge-green':'badge-red'}">${t.success?'SUCCESS':'FAILED'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  LIVE EVENTS (SSE + mock)
+// ══════════════════════════════════════════════
+function connectSSE() {
+  if (!state.token) {
+    startMockEvents();
+    return;
+  }
+  const url = `${CONFIG.apiBase}/events/stream?channel=${state.channel}`;
+  state.sseSource = new EventSource(url + `&token=${state.token}`);
+  state.sseSource.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); } catch{}
+  };
+  state.sseSource.onerror = () => { state.sseSource.close(); startMockEvents(); };
+}
+
+function startMockEvents() {
+  const events = ['ProductRegistered','OwnershipTransferred','ShipmentCreated','LocationUpdated','QualityChecked','ProductDelivered','ChaincodeDeploy'];
+  setInterval(() => {
+    if (!state.sseActive) return;
+    handleEvent({
+      type: Math.random() > 0.3 ? 'chaincode_event' : 'new_block',
+      eventName: rndEl(events),
+      txId: rndHex(10),
+      blockNumber: state.nextBlock,
+      payload: { id: 'PRD-' + Math.random().toString(36).slice(2,8).toUpperCase() },
+    });
+  }, 3500);
+}
+
+function handleEvent(evt) {
+  state.sseTotalEvents++;
+  state.events.unshift(evt);
+  if (state.events.length > 60) state.events.pop();
+
+  const name = evt.eventName || evt.type;
+  state.eventCounts[name] = (state.eventCounts[name] || 0) + 1;
+
+  const feedItem = `
+    <div class="feed-item">
+      <span style="font-size:.85rem">${getEventIcon(evt.eventName||evt.type)}</span>
+      <span class="feed-event">${name}</span>
+      <span style="font-size:.72rem;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${evt.txId||''}</span>
+      <span class="feed-time">${new Date().toLocaleTimeString()}</span>
+    </div>
+  `;
+
+  ['dashFeed','eventsFullFeed'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.insertAdjacentHTML('afterbegin', feedItem);
+      if (el.children.length > 20) el.lastChild.remove();
+    }
+  });
+
+  document.getElementById('sseCount').textContent = state.sseTotalEvents;
+  document.getElementById('sseTotalEvents').textContent = state.sseTotalEvents;
+
+  if (evt.type === 'new_block') {
+    addBlock();
+    addTx();
+  } else if (evt.type === 'chaincode_event') {
+    addTx(evt.eventName, evt.payload?.id);
+  }
+
+  renderEventStats();
+}
+
+function getEventIcon(name) {
+  const m = { ProductRegistered:'📦', OwnershipTransferred:'🔄', ShipmentCreated:'🚚', LocationUpdated:'📍', QualityChecked:'✅', ProductDelivered:'🎯', FlagProduct:'⚠️', new_block:'⬡', ChaincodeDeploy:'▶' };
+  return m[name] || '⬡';
+}
+
+function renderEventStats() {
+  const el = document.getElementById('eventStats');
+  if (!el) return;
+  el.innerHTML = Object.entries(state.eventCounts).map(([k,v]) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg2);border-radius:6px;font-size:.78rem">
+      <span style="display:flex;gap:7px;align-items:center">${getEventIcon(k)} <span style="font-family:var(--mono);font-size:.72rem">${k}</span></span>
+      <span style="font-family:var(--mono);color:var(--cyan)">${v}</span>
+    </div>
+  `).join('');
+}
+
+function toggleSSE() {
+  state.sseActive = !state.sseActive;
+  const btn = document.getElementById('sseToggle');
+  if (state.sseActive) {
+    btn.className = 'btn btn-green btn-sm';
+    btn.textContent = '● Listening';
+  } else {
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.textContent = '○ Paused';
+  }
+}
+
+function clearEvents() {
+  state.events = [];
+  ['dashFeed','eventsFullFeed'].forEach(id => { const el=document.getElementById(id); if(el) el.innerHTML=''; });
+}
+
+// ══════════════════════════════════════════════
+//  CHANNELS PAGE
+// ══════════════════════════════════════════════
+function renderChannels() {
+  const grid = document.getElementById('channelGrid');
+  grid.innerHTML = CHANNELS.map(ch => `
+    <div class="channel-card ${ch===state.channel?'selected':''}" onclick="switchChannel('${ch}');this.parentNode.querySelectorAll('.channel-card').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="channel-name">${ch}</div>
+        <span class="badge badge-green">ACTIVE</span>
+      </div>
+      <div class="channel-cc">${CHANNEL_CC[ch]}</div>
+      <div class="channel-peers">${rndInt(2,6)} peers · ${rndInt(1,4)} orgs</div>
+      <div style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px"><span>Block Height</span><span class="td-mono">#${rndInt(3000,5000)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted)"><span>Transactions</span><span class="td-mono">${rndInt(5000,50000).toLocaleString()}</span></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();switchChannel('${ch}');toast('Switched to ${ch}','info')">Use</button>
+        <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openModal('query')">Query</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Cross-channel checkboxes
+  document.getElementById('cqChannels').innerHTML = CHANNELS.map(ch => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:.83rem;cursor:pointer">
+      <input type="checkbox" name="cqCh" value="${ch}" ${ch===state.channel?'checked':''} style="accent-color:var(--cyan)">
+      ${ch} <span style="color:var(--muted);font-family:var(--mono);font-size:.7rem">(${CHANNEL_CC[ch]})</span>
+    </label>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  CONTRACT FUNCTIONS
+// ══════════════════════════════════════════════
+function renderContractFns() {
+  const fns = [
+    {name:'RegisterProduct',color:'var(--cyan)'},{name:'TransferOwnership',color:'var(--violet)'},
+    {name:'UpdateLocation',color:'var(--green)'},{name:'QualityCheck',color:'var(--amber)'},
+    {name:'DeliverProduct',color:'var(--green)'},{name:'FlagProduct',color:'var(--red)'},
+    {name:'QueryProduct',color:'var(--cyanL)'},{name:'GetHistory',color:'var(--text2)'},
+    {name:'GetAllProducts',color:'var(--text2)'},
+  ];
+  document.getElementById('contractFnList').innerHTML = fns.map(f => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:7px">
+      <span style="font-family:var(--mono);font-size:.75rem;color:${f.color}">${f.name}()</span>
+      <button class="btn btn-ghost btn-xs" onclick="invokeCC('${f.name}')">Invoke</button>
+    </div>
+  `).join('');
+
+  document.getElementById('ccStats').innerHTML = [
+    {label:'Total Invocations',val:'48,291',color:'var(--cyan)'},
+    {label:'Endorsers',val:'6 Orgs',color:'var(--violet)'},
+    {label:'Version',val:'v3.1.0',color:'var(--amber)'},
+    {label:'Sequence',val:'3',color:'var(--green)'},
+  ].map(s => `
+    <div style="background:var(--bg2);border-radius:8px;padding:10px;border:1px solid var(--border)">
+      <div style="font-size:.65rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase">${s.label}</div>
+      <div style="font-family:var(--mono);font-size:1rem;color:${s.color};margin-top:4px">${s.val}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  IDENTITY / MSP
+// ══════════════════════════════════════════════
+function renderOrgMSPs() {
+  document.getElementById('orgMspList').innerHTML = ORGS.map(o => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.1rem">${o.icon}</span>
+        <div><div style="font-size:.82rem;font-weight:600">${o.name}</div><div style="font-family:var(--mono);font-size:.68rem;color:var(--violet)">${o.id}</div></div>
+      </div>
+      <span class="badge badge-green">Active</span>
+    </div>
+  `).join('');
+}
+
+function loadWallet() {
+  document.getElementById('walletList').innerHTML = [
+    {id:'admin',msp:'Org1MSP',role:'admin'},{id:'alice',msp:'Org1MSP',role:'client'},
+    {id:'bob',msp:'Org2MSP',role:'client'},{id:'peer0-org1',msp:'Org1MSP',role:'peer'},
+  ].map(w => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--violetD));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#000">${w.id[0].toUpperCase()}</div>
+        <div><div style="font-size:.83rem;font-weight:600">${w.id}</div><div style="font-family:var(--mono);font-size:.68rem;color:var(--muted)">${w.msp} · ${w.role}</div></div>
+      </div>
+      <button class="btn btn-red btn-xs" onclick="event.stopPropagation();revokeId('${w.id}')">Revoke</button>
+    </div>
+  `).join('');
+}
+
+function updateIdentityPanel() {
+  const u = state.user;
+  document.getElementById('idAvatar').textContent = u.userId[0].toUpperCase();
+  document.getElementById('idName').textContent = u.userId;
+  document.getElementById('idMSP').textContent = u.mspId;
+  document.getElementById('idRole').textContent = u.role;
+  document.getElementById('idOrg').textContent = u.org;
+  document.getElementById('userAvatar').textContent = u.userId[0].toUpperCase();
+  document.getElementById('userName').textContent = u.userId;
+  document.getElementById('currentMSP').textContent = u.mspId;
+}
+
+// ══════════════════════════════════════════════
+//  ANALYTICS
+// ══════════════════════════════════════════════
+function drawTxChart() {
+  const canvas = document.getElementById('txChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const data = [3200, 4800, 3900, 6100, 5200, 7400, 6800];
+  const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const W = canvas.width = canvas.offsetWidth || 500;
+  const H = canvas.height = 200;
+  const pad = { t:20, r:20, b:35, l:55 };
+  const max = Math.max(...data) * 1.12;
+  const xs = i => (i / (data.length-1)) * (W-pad.l-pad.r) + pad.l;
+  const ys = v => H - pad.b - (v/max) * (H-pad.t-pad.b);
+
+  ctx.clearRect(0,0,W,H);
+
+  // Gridlines
+  for (let i = 0; i < 5; i++) {
+    const y = ys(max*i/4);
+    ctx.strokeStyle = 'rgba(56,189,248,.07)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    ctx.fillStyle = '#4a6a8a'; ctx.font = '10px IBM Plex Mono'; ctx.textAlign='right';
+    ctx.fillText((max*i/4/1000).toFixed(1)+'k', pad.l-6, y+4);
+  }
+
+  // Area
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(56,189,248,.2)'); grad.addColorStop(1,'rgba(56,189,248,0)');
+  ctx.beginPath(); ctx.moveTo(xs(0),ys(data[0]));
+  data.forEach((v,i)=>{ if(i>0) ctx.lineTo(xs(i),ys(v)); });
+  ctx.lineTo(xs(data.length-1), H-pad.b); ctx.lineTo(xs(0), H-pad.b);
+  ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  const lineGrad = ctx.createLinearGradient(0,0,W,0);
+  lineGrad.addColorStop(0,'#38bdf8'); lineGrad.addColorStop(1,'#a78bfa');
+  ctx.beginPath(); ctx.moveTo(xs(0),ys(data[0]));
+  data.forEach((v,i)=>{ if(i>0) ctx.lineTo(xs(i),ys(v)); });
+  ctx.strokeStyle=lineGrad; ctx.lineWidth=2.5; ctx.stroke();
+
+  // Dots & labels
+  data.forEach((v,i) => {
+    ctx.beginPath(); ctx.arc(xs(i),ys(v),5,0,Math.PI*2);
+    ctx.fillStyle='#38bdf8'; ctx.fill();
+    ctx.strokeStyle='#020812'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#4a6a8a'; ctx.font='10px IBM Plex Mono'; ctx.textAlign='center';
+    ctx.fillText(labels[i], xs(i), H-8);
+  });
+}
+
+function drawNetworkCanvas() {
+  const canvas = document.getElementById('netCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 400, H = 280;
+  const nodes = [
+    {x:200,y:140,r:20,color:'#38bdf8',label:'ORD'},{x:80,y:60,r:13,color:'#a78bfa',label:'O1'},
+    {x:320,y:60,r:13,color:'#a78bfa',label:'O2'},{x:60,y:180,r:13,color:'#34d399',label:'O3'},
+    {x:340,y:180,r:13,color:'#34d399',label:'O4'},{x:150,y:250,r:13,color:'#fbbf24',label:'O5'},
+    {x:250,y:250,r:13,color:'#fbbf24',label:'O6'},
+  ];
+  const edges=[[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,2],[3,5],[4,6]];
+  let t=0;
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const bg = ctx.createRadialGradient(200,140,0,200,140,200);
+    bg.addColorStop(0,'rgba(14,31,56,.9)'); bg.addColorStop(1,'rgba(2,8,18,0)');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    edges.forEach(([a,b])=>{
+      const na=nodes[a],nb=nodes[b];
+      ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
+      ctx.strokeStyle=`rgba(56,189,248,.15)`; ctx.lineWidth=1.5; ctx.stroke();
+      const pct=(t+a*.17)%1, px=na.x+(nb.x-na.x)*pct, py=na.y+(nb.y-na.y)*pct;
+      ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2);
+      ctx.fillStyle=na.color+'bb'; ctx.fill();
+    });
+    nodes.forEach(n=>{
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r+5,0,Math.PI*2);
+      ctx.fillStyle=n.color+'18'; ctx.fill();
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.color+'2a'; ctx.fill();
+      ctx.strokeStyle=n.color; ctx.lineWidth=1.8; ctx.stroke();
+      ctx.fillStyle=n.color; ctx.font=`bold 9px Outfit`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.label,n.x,n.y);
+    });
+    t+=0.012; requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function renderStatusBars() {
+  const statuses = [['DELIVERED',42,'var(--green)'],['IN_TRANSIT',35,'var(--cyan)'],['REGISTERED',12,'var(--violet)'],['QUALITY_CHECK',8,'var(--amber)'],['FLAGGED',3,'var(--red)']];
+  document.getElementById('statusChart').innerHTML = statuses.map(([s,pct,color])=>`
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:4px"><span>${s.replace(/_/g,' ')}</span><span style="font-family:var(--mono);color:${color}">${pct}%</span></div>
+      <div class="progress"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>
+  `).join('');
+
+  document.getElementById('channelActivity').innerHTML = CHANNELS.map(ch=>{
+    const pct=rndInt(15,95);
+    return `<div>
+      <div style="display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:4px"><span style="font-family:var(--mono)">${ch}</span><span style="color:var(--cyan)">${rndInt(100,9999).toLocaleString()} tx</span></div>
+      <div class="progress"><div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--cyan),var(--violet))"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('blockTimes').innerHTML = [2.1,2.3,1.9,2.5,2.0,2.2,2.4].map((t,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem;padding:5px 8px;background:var(--bg2);border-radius:5px">
+      <span style="color:var(--muted)">Block ${state.nextBlock-6+i}</span>
+      <span style="font-family:var(--mono);color:${t<2.2?'var(--green)':'var(--amber)'}">${t}s</span>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  DEPLOY ORG APPROVALS
+// ══════════════════════════════════════════════
+function renderOrgApprovals() {
+  document.getElementById('orgApprovalList').innerHTML = ORGS.map(o => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:7px;font-family:var(--mono);font-size:.7rem;color:var(--green)">
+      ✓ ${o.id}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════
+async function doLogin() {
+  const userId = document.getElementById('loginUser').value || 'admin';
+  const password = document.getElementById('loginPass').value || 'adminpw';
+
+  const res = await api('POST','/auth/login',{userId,password});
+  if (res?.data?.token) {
+    state.token = res.data.token;
+    state.user = {...res.data.user};
+    document.getElementById('tokenDisplay').style.display='block';
+    document.getElementById('tokenVal').textContent = state.token;
+    updateIdentityPanel();
+    toast(`Authenticated as ${userId} (${res.data.user?.mspId||'Org1MSP'}) ✓`,'success');
+    connectSSE();
+  } else {
+    // Offline mock auth
+    state.token = 'mock_jwt_' + Date.now();
+    state.user = { userId, mspId:'Org1MSP', role:'admin', org:'Org1' };
+    document.getElementById('tokenDisplay').style.display='block';
+    document.getElementById('tokenVal').textContent = state.token + ' (mock — start backend for real auth)';
+    updateIdentityPanel();
+    toast(`Demo auth as ${userId} · Start backend for real JWT`,'info');
+  }
+}
+
+async function submitProduct() {
+  const name = document.getElementById('pName').value;
+  if (!name) { toast('Product name required','error'); return; }
+
+  const btn = document.getElementById('pSubmitBtn');
+  btn.disabled = true; btn.textContent = '⬡ Submitting…';
+
+  const body = {
+    name, category: document.getElementById('pCat').value,
+    origin: document.getElementById('pOrigin').value || 'Unknown',
+    manufacturer: document.getElementById('pMfr').value || 'Unknown',
+    batchNumber: document.getElementById('pBatch').value,
+    description: document.getElementById('pDesc').value,
+    serialNumber: document.getElementById('pSerial').value,
+  };
+
+  const res = await api('POST','/products',body);
+  const productId = res?.data?.productId || 'PRD-' + Math.random().toString(36).slice(2,8).toUpperCase();
+
+  state.products.unshift({
+    id: productId, name, category: body.category, origin: body.origin||'Unknown',
+    location: body.origin||'Origin', owner: state.user.mspId, authenticity:98+Math.random()*2|0, status:'REGISTERED',
+  });
+  renderProducts(state.products);
+  addTx('RegisterProduct', productId);
+  addBlock();
+  closeModal('product');
+  toast(`Product "${name}" registered on ${state.channel} ⬡`,'success');
+  ['pName','pBatch','pOrigin','pMfr','pDesc','pSerial'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  btn.disabled=false; btn.textContent='⬡ Commit to Blockchain';
+}
+
+async function submitShipment() {
+  const origin = document.getElementById('sOrigin').value;
+  const dest = document.getElementById('sDest').value;
+  if (!origin || !dest) { toast('Origin and destination required','error'); return; }
+
+  const btn = document.getElementById('sSubmitBtn');
+  btn.disabled=true; btn.textContent='Deploying…';
+
+  const productIds = document.getElementById('sPids').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const body = {
+    origin, destination: dest,
+    carrier: document.getElementById('sCarrier').value,
+    estimatedDelivery: document.getElementById('sETA').value || new Date(Date.now()+14*86400000).toISOString().split('T')[0],
+    productIds: productIds.length ? productIds : ['PRD-DEFAULT'],
+    temperature: document.getElementById('sTemp').value,
+    humidity: document.getElementById('sHumidity').value,
+  };
+
+  await api('POST','/shipments',body);
+  const shipId = `SHP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  state.shipments.unshift({ id:shipId, productIds:body.productIds, origin, destination:dest, carrier:body.carrier, estimatedDelivery:body.estimatedDelivery, progress:0, status:'CREATED' });
+  renderShipments(state.shipments);
+  addTx('CreateShipment', shipId);
+  addBlock();
+  closeModal('shipment');
+  toast(`Shipment ${shipId} deployed on chain 🚚`,'success');
+  btn.disabled=false; btn.textContent='⬡ Deploy Shipment Contract';
+}
+
+async function submitEnroll() {
+  const btn = document.getElementById('eSubmitBtn');
+  btn.disabled=true; btn.textContent='Enrolling…';
+  const body = {
+    orgName: document.getElementById('eOrg').value || 'Org1',
+    adminId: document.getElementById('eAdmin').value || 'admin',
+    adminSecret: document.getElementById('eSecret').value || 'adminpw',
+    caName: document.getElementById('eCaName').value || 'ca-org1',
+    caUrl: document.getElementById('eCaUrl').value || 'https://ca.org1.example.com:7054',
+  };
+  await api('POST','/auth/enroll-admin',body);
+  toast(`Admin "${body.adminId}" enrolled — X.509 certificate stored in wallet ✓`,'success');
+  closeModal('enroll'); btn.disabled=false; btn.textContent='⬡ Enroll & Get Certificate';
+}
+
+async function submitRegister() {
+  const btn = document.getElementById('rSubmitBtn');
+  btn.disabled=true; btn.textContent='Registering…';
+  const body = {
+    userId: document.getElementById('rUser').value,
+    password: document.getElementById('rPass').value,
+    orgName: document.getElementById('rOrg').value || 'Org1',
+    adminId: document.getElementById('rAdmin').value || 'admin',
+    role: document.getElementById('rRole').value,
+  };
+  if (!body.userId) { toast('User ID required','error'); btn.disabled=false; btn.textContent='Register & Enroll'; return; }
+  await api('POST','/auth/register',body);
+  loadWallet();
+  toast(`User "${body.userId}" registered with MSP certificate ✓`,'success');
+  closeModal('register'); btn.disabled=false; btn.textContent='Register & Enroll';
+}
+
+async function submitDeploy() {
+  closeModal('deploy');
+  toast('Sending chaincode proposal to all peers…','info');
+  setTimeout(()=>{
+    addBlock(); addTx('ChaincodeDeploy','supply-chain-cc');
+    toast(`Chaincode deployed & committed on ${document.getElementById('dChannel').value} ✓`,'success');
+  }, 2000);
+}
+
+async function submitQuery() {
+  const id = document.getElementById('qId').value;
+  const type = document.getElementById('qType').value;
+  if (!id) { toast('Enter an asset ID','error'); return; }
+
+  let result = state.products.find(p=>p.id===id) || state.shipments.find(s=>s.id===id);
+  if (!result) {
+    const res = await api('GET', `/products/${id}`);
+    result = res?.data || { id, status:'NOT_FOUND', message:'Asset not found. Try PRD-A1B2C3', channel:state.channel };
+  }
+  document.getElementById('queryOutput').textContent = JSON.stringify(result, null, 2);
+  document.getElementById('queryResult').style.display = 'block';
+}
+
+async function submitCrossQuery() {
+  const assetId = document.getElementById('cqId').value;
+  const checked = [...document.querySelectorAll('input[name="cqCh"]:checked')].map(el=>el.value);
+  if (!assetId || !checked.length) { toast('Enter asset ID and select channels','error'); return; }
+
+  closeModal('crossQuery');
+  document.getElementById('crossQueryCard').style.display='block';
+  document.getElementById('crossQueryResult').innerHTML = `<div class="loading-wrap"><div class="spinner"></div></div>`;
+
+  setTimeout(()=>{
+    document.getElementById('crossQueryResult').innerHTML = checked.map(ch=>{
+      const found = Math.random()>0.4;
+      return `
+        <div style="margin-bottom:10px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-weight:600">${ch}</span>
+            <span class="badge ${found?'badge-green':'badge-red'}">${found?'FOUND':'NOT FOUND'}</span>
+          </div>
+          ${found?`<div style="font-family:var(--mono);font-size:.72rem;color:var(--green)">{"id":"${assetId}","channel":"${ch}","status":"${rndEl(STATUSES)}","owner":"${rndEl(ORGS).id}"}</div>`:'<div style="color:var(--muted);font-size:.8rem">Asset not registered on this channel</div>'}
+        </div>
+      `;
+    }).join('');
+    toast(`Cross-channel query complete for ${assetId}`,'success');
+  }, 1200);
+}
+
+function queryProduct(id) {
+  document.getElementById('qId').value = id;
+  document.getElementById('qType').value = 'history';
+  openModal('query');
+  setTimeout(()=>submitQuery(), 200);
+}
+
+function transferProduct(id) {
+  const p = state.products.find(x=>x.id===id);
+  if (p) {
+    const newOwner = rndEl(ORGS.filter(o=>o.id!==p.owner)).id;
+    p.owner = newOwner; p.status='IN_TRANSIT';
+    addTx('TransferOwnership', id);
+    addBlock();
+    renderProducts(state.products);
+    toast(`Ownership of ${id} → ${newOwner} committed ⬡`,'success');
+  }
+}
+
+function invokeCC(fnName) {
+  toast(`Invoking ${fnName}() on ${state.channel}…`,'info');
+  setTimeout(()=>{ addTx(fnName); addBlock(); toast(`${fnName}() committed ✓`,'success'); }, 900);
+}
+
+function revokeId(userId) {
+  if (!confirm(`Revoke identity "${userId}" from wallet?`)) return;
+  toast(`Identity "${userId}" revoked from wallet`,'warn');
+  loadWallet();
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function showPage(name, triggerEl, fromSidebar=false) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l=>l.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+
+  const page = document.getElementById('page-'+name);
+  if (page) page.classList.add('active');
+  if (triggerEl) triggerEl.classList.add('active');
+
+  if (fromSidebar) closeSidebar();
+
+  // Lazy init
+  if (name==='analytics') { setTimeout(()=>{ drawTxChart(); drawNetworkCanvas(); renderStatusBars(); },100); }
+  if (name==='channels') renderChannels();
+  if (name==='identity') { updateIdentityPanel(); renderOrgMSPs(); loadWallet(); }
+  if (name==='events') renderEventStats();
+
+  document.getElementById('dashChannel').textContent = state.channel;
+}
+
+function switchChannel(ch) {
+  state.channel = ch;
+  document.getElementById('channelSelect').value = ch;
+  document.getElementById('currentChannelLabel').textContent = ch;
+  document.getElementById('sseChannel').textContent = ch;
+  document.getElementById('pChannel').textContent = ch;
+  state.products = []; state.shipments = [];
+  loadProducts(); loadShipments();
+  toast(`Switched to channel: ${ch}`,'info');
+}
+
+// ══════════════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════════════
+function toggleSidebar() {
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sidebarOverlay');
+  const open=sb.classList.toggle('open');
+  ov.style.display = open?'block':'none';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').style.display='none';
+}
+
+// ══════════════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById('modal-'+id)?.classList.add('show');
+  if (id==='deploy') renderOrgApprovals();
+}
+function closeModal(id) {
+  document.getElementById('modal-'+id)?.classList.remove('show');
+}
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('show'); });
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.show').forEach(el=>el.classList.remove('show')); });
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function switchTab(group, tabId, btn) {
+  const container = document.getElementById(group);
+  container.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  container.parentElement.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`${group}-${tabId}`)?.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════
+function copyCode(elId) {
+  const code = document.getElementById(elId)?.textContent || '';
+  navigator.clipboard.writeText(code).then(()=>toast('Code copied to clipboard','info'));
+}
+
+function refreshAll() {
+  state.products=[]; state.shipments=[];
+  loadProducts(); loadShipments();
+  addBlock(); addTx();
+  toast('Data refreshed','info');
+}
+
+function toast(msg, type='info') {
+  const icons={success:'✅',error:'❌',info:'ℹ️',warn:'⚠️'};
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 3800);
+}
+
+// ══════════════════════════════════════════════
+//  CHECK API HEALTH
+// ══════════════════════════════════════════════
+async function checkApiHealth() {
+  try {
+    const res = await fetch(`${CONFIG.apiBase.replace('/api/v1','')}/health`, { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    document.getElementById('apiStatus').textContent = '●';
+    document.getElementById('apiStatus').style.color = 'var(--green)';
+    document.getElementById('apiUrl').textContent = 'localhost:3001 ✓';
+    toast(`Connected to ChainTrace API · ${data.network?.defaultChannel}`,'success');
+  } catch {
+    document.getElementById('apiStatus').style.color = 'var(--amber)';
+    document.getElementById('apiUrl').textContent = 'localhost:3001 (offline)';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  initBlocks();
+  for (let i = 0; i < 10; i++) addTx();
+  loadProducts();
+  loadShipments();
+  renderContractFns();
+  checkApiHealth();
+  updateIdentityPanel();
+  startMockEvents();
+  setTimeout(()=>toast('ChainTrace DApp ready · Hyperledger Fabric v2.5','success'), 600);
+});
+
+window.addEventListener('resize', ()=>{ drawTxChart(); });
+
+// Auto-mining
+setInterval(()=>{ addBlock(); state.totalTxs+=rndInt(1,4); }, 4500);
+</script>
+</body>
+</html>
